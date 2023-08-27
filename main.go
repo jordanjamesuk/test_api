@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	db, err := NewDatabase("mongodb://localhost:27017")
+	db, err := NewMongoDatabase("mongodb://localhost:27017")
 	if err != nil {
 		log.Fatal(err)
 	}
