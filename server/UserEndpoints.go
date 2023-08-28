@@ -1,81 +1,26 @@
 package server
 
 import (
-	. "test_api/user"
-
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (s *Server) GetUser(c *gin.Context) {
-	id := c.Query("id")
-
-	objID, err := primitive.ObjectIDFromHex(id)
+func (s *Server) UserHome(c *gin.Context) {
+	session := sessions.Default(c)
+	userIDHex := session.Get("user")
+	userID, err := primitive.ObjectIDFromHex(userIDHex.(string))
 	if err != nil {
-		c.JSON(400, gin.H{"status": "failed", "message": id + " is not a valid objectID"})
+		c.JSON(500, gin.H{"status": "failed", "message": "Might of deleted user, while session still exists"})
 		return
 	}
 
-	foundUser, err := s.Database.FindUserByID(&objID)
+	user, err := s.Database.FindUserByKeyValue("_id", userID)
 	if err != nil {
-		c.JSON(404, gin.H{"status": "failed", "message": "Unable to find user: " + id})
+		c.JSON(500, gin.H{"status": "failed", "message": "Might of deleted user, while session still exists"})
 		return
 	}
 
-	c.JSON(200, foundUser)
-	return
+	c.JSON(200, gin.H{"user": user})
 }
 
-func (s *Server) CreateUser(c *gin.Context) {
-	var postBody User
-
-	if err := c.BindJSON(&postBody); err != nil {
-		c.JSON(400, gin.H{"status": "failed", "message": "Unable to validate incoming json body"})
-		return
-	}
-
-	newUser, err := s.Database.NewUser(postBody.Name, postBody.Email)
-	if err != nil {
-		c.JSON(500, gin.H{"status": "failed", "message": "Unable to insert new user into database"})
-		return
-	}
-
-	c.JSON(201, newUser)
-}
-
-func (s *Server) UpdateUser(c *gin.Context) {
-	var postBody User
-
-	if err := c.BindJSON(&postBody); err != nil {
-		c.JSON(400, gin.H{"status": "failed", "message": "Unable to validate incoming json body"})
-		return
-	}
-
-	updatedUser, err := s.Database.UpdateUser(&postBody.Id, &postBody)
-	if err != nil {
-		c.JSON(404, gin.H{"status": "failed", "message": "Unable to update user: " + postBody.Id.Hex()})
-		return
-	}
-
-	c.JSON(200, updatedUser)
-	return
-}
-
-func (s *Server) DeleteUser(c *gin.Context) {
-	id := c.Query("id")
-
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.JSON(400, gin.H{"status": "failed", "message": id + " is not a valid objectID"})
-		return
-	}
-
-	hasDeletedUser, err := s.Database.DeleteUser(&objID)
-	if err != nil {
-		c.JSON(500, gin.H{"status": "failed", "message": "Unable to delete user: " + id})
-		return
-	}
-
-	c.JSON(200, gin.H{"deleted": hasDeletedUser})
-	return
-}

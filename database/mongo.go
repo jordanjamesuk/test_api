@@ -2,13 +2,12 @@ package database
 
 import (
 	"context"
-	. "test_api/user"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	. "test_api/user"
 )
 
 type MongoDB struct {
@@ -36,26 +35,47 @@ func NewMongoDatabase(connectionString string) (*MongoDB, error) {
 		Client:   client,
 		Database: client.Database("test_api"),
 	}, nil
-
 }
 
-func (db *MongoDB) NewUser(name, email string) (newUser *User, err error) {
-	result, err := db.Database.Collection("users").InsertOne(context.Background(), bson.M{"name": name, "email": email})
+func (db *MongoDB) GetAllUsers() (users *[]User, err error) {
+	var result []User
+
+	cur, err := db.Database.Collection("users").Find(context.Background(), bson.M{})
+	if err != nil {
+		return nil, err
+	}
+
+	for cur.Next(context.Background()) {
+		var user *User
+		err := cur.Decode(&user)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, *user)
+
+	}
+
+	return &result, nil
+}
+
+func (db *MongoDB) NewUser(name, username, email string, passwordHash string) (newUser *User, err error) {
+	result, err := db.Database.Collection("users").InsertOne(context.Background(), bson.M{"name": name, "email": email, "username": username, "password_hash": string(passwordHash)})
 	if err != nil {
 		return nil, err
 	}
 
 	return &User{
-		Id:    result.InsertedID.(primitive.ObjectID),
-		Name:  name,
-		Email: email,
+		Id:           result.InsertedID.(primitive.ObjectID),
+		Name:         name,
+		Email:        email,
+		PasswordHash: passwordHash,
 	}, nil
 }
 
-func (db *MongoDB) FindUserByID(id *primitive.ObjectID) (foundUser *User, err error) {
+func (db *MongoDB) FindUserByKeyValue(key string, value any) (foundUser *User, err error) {
 	var result User
 
-	if err = db.Database.Collection("users").FindOne(context.Background(), bson.M{"_id": id}).Decode(&result); err == mongo.ErrNoDocuments {
+	if err = db.Database.Collection("users").FindOne(context.Background(), bson.M{key: value}).Decode(&result); err == mongo.ErrNoDocuments {
 		return nil, err
 	}
 
