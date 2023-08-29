@@ -1,12 +1,11 @@
 package server
 
 import (
-	"os"
-	. "test_api/database"
-
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"os"
+	. "test_api/database"
 )
 
 type Server struct {

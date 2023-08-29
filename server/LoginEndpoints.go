@@ -10,12 +10,15 @@ import (
 )
 
 func (s *Server) Login(c *gin.Context) {
-	session := sessions.Default(c)
+	if c.ContentType() != "x-www-form-urlencoded" {
+		c.JSON(415, gin.H{"status": "failed", "message": "Only accept content ContentType of x-www-form-urlencoded"})
+		return
+	}
 
 	var postBodyUser struct {
-		Username string `json:"username" bson:"username" validate:"required_without=Email"`
-		Email    string `json:"email" bson:"email" validate:"required_without=Username, email"`
-		Password string `json:"password" bson:"password" binding:"required"`
+		Username string `form:"username" validate:"required_without=Email"`
+		Email    string `form:"email" validate:"required_without=Username, email"`
+		Password string `form:"password" binding:"required"`
 	}
 
 	if err := c.BindJSON(&postBodyUser); err != nil {
@@ -53,6 +56,7 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
+	session := sessions.Default(c)
 	session.Set("user", user.Id.Hex())
 	if err := session.Save(); err != nil {
 		fmt.Println(err)
