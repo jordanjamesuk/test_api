@@ -39,16 +39,13 @@ func (s *Server) Login(c *gin.Context) {
 
 	if postBodyUser.Username != "" {
 		user, err = s.Database.FindUserByKeyValue("username", postBodyUser.Username)
-		if err != nil {
-			c.JSON(400, gin.H{"status": "failed", "message": "Unable to find user"})
-			return
-		}
 	} else {
 		user, err = s.Database.FindUserByKeyValue("Email", postBodyUser.Email)
-		if err != nil {
-			c.JSON(400, gin.H{"status": "failed", "message": "Unable to find user"})
-			return
-		}
+	}
+
+	if err != nil {
+		c.JSON(400, gin.H{"status": "failed", "message": "Unable to find user"})
+		return
 	}
 
 	if success := utils.ComparePasswords(user.PasswordHash, []byte(postBodyUser.Password)); success == false {
